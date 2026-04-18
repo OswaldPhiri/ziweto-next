@@ -46,8 +46,9 @@ export async function POST(req: NextRequest) {
   const folder    = "ziweto-market";
 
   // Build the signature string — must match Cloudinary's expected format exactly
+  // Parameters must be in alphabetical order: folder, timestamp
   const toSign    = `folder=${folder}&timestamp=${timestamp}${apiSecret}`;
-  const signature = crypto.createHash("sha256").update(toSign).digest("hex");
+  const signature = crypto.createHash("sha1").update(toSign).digest("hex");
 
   return NextResponse.json({
     cloudName,
