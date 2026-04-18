@@ -12,9 +12,10 @@ export default function Header() {
       <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 no-underline">
-          <span className="w-8 h-8 bg-[#25D366] text-white text-sm font-bold rounded-lg flex items-center justify-center flex-shrink-0">
-            Z
-          </span>
+          <svg width="32" height="32" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" className="flex-shrink-0">
+            <rect width="512" height="512" rx="128" fill="#25D366" />
+            <text x="256" y="350" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="320" fill="white" text-anchor="middle">Z</text>
+          </svg>
           <span className="font-bold text-gray-900 text-[1.05rem] tracking-tight">
             Ziweto
             <em className="font-normal not-italic font-[var(--font-instrument)] italic text-[#128C4C]">

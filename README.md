@@ -1,6 +1,8 @@
 # Ziweto Market
 
-A local e-commerce marketplace for Malawi. Buyers browse listings and contact sellers directly on WhatsApp. Built with Next.js 14, Firebase, and Tailwind CSS.
+A dedicated e-commerce platform and digital marketplace built for the **Ziweto Enterprise** network in Malawi. This application bridges the gap between rural smallholder farmers and vital agribusiness services by offering a modernized digital storefront for livestock, veterinary drugs, animal feed, poultry, and farming equipment. 
+
+Buyers can easily browse localized agrovet listings, filter by categories or prices, and seamlessly contact sellers or franchised agrovet shops directly via WhatsApp for inquiries and purchasing. Built with modern web technologies to ensure speed and accessibility even on limited data networks.
 
 ---
 
