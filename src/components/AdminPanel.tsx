@@ -234,13 +234,19 @@ export default function AdminPanel() {
         const res = await fetch(`/api/products/${editingId}`, {
           method: "PUT", headers, body: JSON.stringify(body),
         });
-        if (!res.ok) throw new Error("Update failed");
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || "Update failed");
+        }
         setFormOk("Listing updated.");
       } else {
         const res = await fetch("/api/products", {
           method: "POST", headers, body: JSON.stringify(body),
         });
-        if (!res.ok) throw new Error("Create failed");
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || "Create failed");
+        }
         setFormOk("Listing added.");
         setForm(EMPTY_FORM);
         setEditingId(null);

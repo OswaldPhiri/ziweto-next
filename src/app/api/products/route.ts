@@ -37,6 +37,7 @@ export async function POST(req: NextRequest) {
     });
     return NextResponse.json({ id: ref.id }, { status: 201 });
   } catch (err: unknown) {
+    console.error("POST /api/products error:", err);
     return NextResponse.json({ error: (err as Error).message }, { status: 500 });
   }
 }
