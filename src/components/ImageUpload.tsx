@@ -24,7 +24,32 @@ export default function ImageUpload({
   const [state, setState] = useState<UploadState>("idle");
   const [progress, setProgress] = useState(0);
   const [errorMsg, setErrorMsg] = useState("");
+  const [resolving, setResolving] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-resolve Pinterest links
+  const handleUrlChange = async (url: string) => {
+    const trimmed = url.trim();
+    onChange(trimmed);
+
+    if (trimmed.includes("pin.it") || trimmed.includes("pinterest.com/pin")) {
+      setResolving(true);
+      setErrorMsg("");
+      try {
+        const res = await fetch(`/api/resolve-link?url=${encodeURIComponent(trimmed)}`);
+        const data = await res.json();
+        if (data.url) {
+          onChange(data.url);
+        } else if (data.error) {
+          setErrorMsg(data.error);
+        }
+      } catch {
+        setErrorMsg("Failed to resolve link.");
+      } finally {
+        setResolving(false);
+      }
+    }
+  };
 
   async function uploadFile(file: File) {
     if (!file.type.startsWith("image/")) {
@@ -243,13 +268,11 @@ export default function ImageUpload({
           <input
             type="url"
             autoFocus
-            value={value}
-            onChange={(e) => {
-              const val = e.target.value.trim();
-              if (val) onChange(val);
-            }}
+            value={resolving ? "Resolving link..." : value}
+            disabled={resolving}
+            onChange={(e) => handleUrlChange(e.target.value)}
             placeholder="https://example.com/image.jpg"
-            className="field font-mono text-xs placeholder:italic"
+            className={`field font-mono text-xs placeholder:italic ${resolving ? 'animate-pulse text-gray-400 bg-gray-100' : ''}`}
           />
           <p className="text-[10px] text-gray-400 mt-3 leading-relaxed">
             Tip: Upload to <a href="https://imgbb.com" target="_blank" rel="noopener" className="text-[#128C4C] font-bold hover:underline">imgbb.com</a>, copy the 

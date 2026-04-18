@@ -159,8 +159,39 @@ export default function AdminPanel() {
     setFormOk("");
   }
 
+  async function resolveExtraLinks(text: string) {
+    const lines = text.split("\n");
+    let changed = false;
+    const resolvedLines = await Promise.all(lines.map(async (line) => {
+      const trimmed = line.trim();
+      if (trimmed && (trimmed.includes("pin.it") || trimmed.includes("pinterest.com/pin")) && !trimmed.includes("i.pinimg.com")) {
+        try {
+          const res = await fetch(`/api/resolve-link?url=${encodeURIComponent(trimmed)}`);
+          const data = await res.json();
+          if (data.url) {
+            changed = true;
+            return data.url;
+          }
+        } catch (err) {
+          console.error("Failed to resolve extra link", err);
+        }
+      }
+      return line;
+    }));
+
+    if (changed) {
+      setForm((prev) => ({ ...prev, imagesExtra: resolvedLines.join("\n") }));
+    }
+  }
+
   function setField(key: keyof FormState, val: string) {
     setForm((prev) => ({ ...prev, [key]: val }));
+    if (key === "imagesExtra" && val.length > 5) {
+      // Debounce or just trigger on newline
+      if (val.endsWith("\n") || val.split("\n").length > 0) {
+        resolveExtraLinks(val);
+      }
+    }
   }
 
   // ── Save ──
