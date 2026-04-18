@@ -385,8 +385,46 @@ export default function AdminPanel() {
               {/* Extra images */}
               <div className="sm:col-span-2">
                 <label className="label">Extra Image URLs <span className="font-normal text-gray-400">(optional — one per line)</span></label>
-                <textarea value={form.imagesExtra} onChange={(e) => setField("imagesExtra", e.target.value)} rows={3} placeholder={"https://…\nhttps://…"} className="field resize-y" />
-                <p className="text-xs text-gray-400 mt-1">Paste direct image links, one per line. You can also upload to <a href="https://imgbb.com" target="_blank" rel="noopener" className="text-[#128C4C] underline">imgbb.com</a> and paste the URL.</p>
+                <textarea 
+                  value={form.imagesExtra} 
+                  onChange={(e) => setField("imagesExtra", e.target.value)} 
+                  rows={3} 
+                  placeholder={"https://…\nhttps://…"} 
+                  className={`field resize-y font-mono text-xs ${form.imagesExtra ? 'rounded-b-none border-b-0' : ''}`} 
+                />
+                
+                {/* Extra images previews */}
+                {form.imagesExtra.trim() && (
+                  <div className="bg-gray-50 border border-gray-200 border-t-0 rounded-b-xl p-3 flex flex-wrap gap-2">
+                    {form.imagesExtra.split("\n").map((url, i) => {
+                      const trimmed = url.trim();
+                      if (!trimmed || !trimmed.startsWith("http")) return null;
+                      return (
+                        <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden border border-gray-200 bg-white group">
+                          <img src={trimmed} alt="" className="w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <button 
+                              type="button"
+                              onClick={() => {
+                                const lines = form.imagesExtra.split("\n");
+                                lines.splice(i, 1);
+                                setField("imagesExtra", lines.join("\n"));
+                              }}
+                              className="text-white text-[10px] font-bold"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    <div className="w-16 h-16 rounded-lg border-2 border-dashed border-gray-200 flex items-center justify-center text-gray-300 text-xs">
+                      +
+                    </div>
+                  </div>
+                )}
+                
+                <p className="text-xs text-gray-400 mt-1">Paste direct image links, one per line. You can also upload to <a href="https://imgbb.com" target="_blank" rel="noopener" className="text-[#128C4C] underline font-medium">imgbb.com</a> and paste the link.</p>
               </div>
 
               {/* Divider */}

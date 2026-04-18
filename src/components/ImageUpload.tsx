@@ -5,22 +5,28 @@ import { useState, useRef } from "react";
 import Image from "next/image";
 
 interface Props {
-  value: string;          // current image URL
+  value: string; // current image URL
   onChange: (url: string) => void;
   label?: string;
-  getToken: () => Promise<string>;  // returns Firebase ID token for auth
+  getToken: () => Promise<string>; // returns Firebase ID token for auth
 }
 
 type UploadState = "idle" | "uploading" | "done" | "error";
+type Mode = "upload" | "link";
 
-export default function ImageUpload({ value, onChange, label = "Image", getToken }: Props) {
-  const [state,    setState]   = useState<UploadState>("idle");
+export default function ImageUpload({
+  value,
+  onChange,
+  label = "Image",
+  getToken,
+}: Props) {
+  const [mode, setMode] = useState<Mode>(value && !value.includes("cloudinary") ? "link" : "upload");
+  const [state, setState] = useState<UploadState>("idle");
   const [progress, setProgress] = useState(0);
   const [errorMsg, setErrorMsg] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   async function uploadFile(file: File) {
-    // Validate client-side first
     if (!file.type.startsWith("image/")) {
       setErrorMsg("Please select an image file (JPG, PNG, WebP).");
       setState("error");
@@ -37,7 +43,6 @@ export default function ImageUpload({ value, onChange, label = "Image", getToken
     setErrorMsg("");
 
     try {
-      // Step 1: get signed upload params from our API route
       const token = await getToken();
       const sigRes = await fetch("/api/upload", {
         method: "POST",
@@ -49,19 +54,24 @@ export default function ImageUpload({ value, onChange, label = "Image", getToken
         throw new Error(err.error ?? "Could not get upload credentials.");
       }
 
-      const { uploadUrl, cloudName: _cn, apiKey, timestamp, signature, folder } = await sigRes.json();
+      const {
+        uploadUrl,
+        cloudName: _cn,
+        apiKey,
+        timestamp,
+        signature,
+        folder,
+      } = await sigRes.json();
       void _cn;
       setProgress(30);
 
-      // Step 2: upload directly to Cloudinary from the browser
       const formData = new FormData();
-      formData.append("file",      file);
-      formData.append("api_key",   apiKey);
+      formData.append("file", file);
+      formData.append("api_key", apiKey);
       formData.append("timestamp", String(timestamp));
       formData.append("signature", signature);
-      formData.append("folder",    folder);
+      formData.append("folder", folder);
 
-      // Use XMLHttpRequest so we can track upload progress
       const url = await new Promise<string>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.open("POST", uploadUrl);
@@ -73,14 +83,13 @@ export default function ImageUpload({ value, onChange, label = "Image", getToken
         xhr.onload = () => {
           if (xhr.status === 200) {
             const data = JSON.parse(xhr.responseText);
-            // Use f_auto,q_auto for automatic format and quality optimisation
             const optimised = data.secure_url.replace(
               "/upload/",
               "/upload/f_auto,q_auto,w_800/"
             );
             resolve(optimised);
           } else {
-            reject(new Error("Upload failed. Please try again."));
+            reject(new Error("Upload failed. Check if Cloudinary keys are set in .env.local"));
           }
         };
         xhr.onerror = () => reject(new Error("Network error during upload."));
@@ -120,36 +129,64 @@ export default function ImageUpload({ value, onChange, label = "Image", getToken
   }
 
   return (
-    <div>
-      <label className="label">{label}</label>
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <label className="label mb-0">{label}</label>
+        {!value && (
+          <div className="flex bg-gray-100 p-0.5 rounded-lg">
+            <button
+              type="button"
+              onClick={() => setMode("upload")}
+              className={`px-3 py-1 text-[10px] font-bold uppercase rounded-md transition-all ${
+                mode === "upload" ? "bg-white text-gray-900 shadow-sm" : "text-gray-400 hover:text-gray-600"
+              }`}
+            >
+              Upload
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("link")}
+              className={`px-3 py-1 text-[10px] font-bold uppercase rounded-md transition-all ${
+                mode === "link" ? "bg-white text-gray-900 shadow-sm" : "text-gray-400 hover:text-gray-600"
+              }`}
+            >
+              Link
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* Preview */}
       {value && (
-        <div className="relative mb-3 w-full aspect-[4/3] max-w-xs rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
-          <Image src={value} alt="Preview" fill className="object-cover" sizes="320px" />
+        <div className="group relative w-full aspect-[4/3] max-w-sm rounded-2xl overflow-hidden border border-gray-200 bg-gray-50 shadow-sm">
+          <Image src={value} alt="Preview" fill className="object-cover" sizes="400px" unoptimized />
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
           <button
             type="button"
             onClick={clearImage}
-            className="absolute top-2 right-2 w-7 h-7 bg-black/60 hover:bg-black/80 text-white rounded-full text-xs flex items-center justify-center transition-colors"
+            className="absolute top-3 right-3 w-8 h-8 bg-white/90 hover:bg-white text-red-500 rounded-full shadow-lg flex items-center justify-center transition-all scale-90 group-hover:scale-100"
             title="Remove image"
           >
             ✕
           </button>
+          <div className="absolute bottom-3 left-3 right-3 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+            <p className="text-[10px] text-gray-500 font-mono truncate">{value}</p>
+          </div>
         </div>
       )}
 
-      {/* Upload zone */}
-      {!value && (
+      {/* Main UI */}
+      {!value && mode === "upload" && (
         <div
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onClick={() => inputRef.current?.click()}
-          className={`relative border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${
+          className={`relative border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all duration-200 ${
             state === "uploading"
               ? "border-[#25D366] bg-green-50"
               : state === "error"
               ? "border-red-300 bg-red-50"
-              : "border-gray-200 hover:border-[#25D366] hover:bg-green-50/30"
+              : "border-gray-200 hover:border-[#25D366] hover:bg-green-50/20"
           }`}
         >
           <input
@@ -161,45 +198,66 @@ export default function ImageUpload({ value, onChange, label = "Image", getToken
           />
 
           {state === "uploading" ? (
-            <div className="space-y-2">
-              <p className="text-sm text-[#128C4C] font-medium">Uploading… {progress}%</p>
-              <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+            <div className="py-4 px-2 max-w-xs mx-auto space-y-3">
+              <p className="text-sm text-[#128C4C] font-semibold">Uploading your photo…</p>
+              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-[#25D366] rounded-full transition-all duration-300"
+                  className="h-full bg-[#25D366] rounded-full transition-all duration-300 ease-out shadow-[0_0_10px_rgba(37,211,102,0.4)]"
                   style={{ width: `${progress}%` }}
                 />
               </div>
+              <p className="text-[10px] text-gray-400">{progress}% complete</p>
             </div>
           ) : state === "error" ? (
-            <div>
-              <p className="text-sm text-red-500 mb-1">⚠️ {errorMsg}</p>
-              <p className="text-xs text-gray-400">Click to try again</p>
+            <div className="py-2">
+              <p className="text-sm text-red-500 font-medium mb-1 flex items-center justify-center gap-1">
+                <span>⚠️</span> {errorMsg}
+              </p>
+              <button 
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setMode("link"); }}
+                className="text-xs text-[#128C4C] font-bold hover:underline"
+              >
+                Use a link instead →
+              </button>
             </div>
           ) : (
             <div>
-              <p className="text-2xl mb-2">📷</p>
-              <p className="text-sm font-medium text-gray-700">
-                Click to upload or drag an image here
+              <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl group-hover:scale-110 transition-transform">
+                📷
+              </div>
+              <p className="text-sm font-semibold text-gray-700">
+                Click to upload or drag photo here
               </p>
-              <p className="text-xs text-gray-400 mt-1">JPG, PNG, WebP — max 8MB</p>
+              <p className="text-[11px] text-gray-400 mt-1">High quality JPG or PNG (Max 8MB)</p>
             </div>
           )}
         </div>
       )}
 
-      {/* Manual URL fallback */}
-      <div className="mt-2">
-        <p className="text-xs text-gray-400 mb-1">
-          Or paste an image URL directly:
-        </p>
-        <input
-          type="url"
-          value={value}
-          onChange={(e) => { onChange(e.target.value); setState("idle"); }}
-          placeholder="https://…"
-          className="field text-xs"
-        />
-      </div>
+      {!value && mode === "link" && (
+        <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4">
+          <p className="text-[11px] font-semibold text-gray-500 mb-2 uppercase tracking-wider italic">
+            Paste a Direct Link
+          </p>
+          <input
+            type="url"
+            autoFocus
+            value={value}
+            onChange={(e) => {
+              const val = e.target.value.trim();
+              if (val) onChange(val);
+            }}
+            placeholder="https://example.com/image.jpg"
+            className="field font-mono text-xs placeholder:italic"
+          />
+          <p className="text-[10px] text-gray-400 mt-3 leading-relaxed">
+            Tip: Upload to <a href="https://imgbb.com" target="_blank" rel="noopener" className="text-[#128C4C] font-bold hover:underline">imgbb.com</a>, copy the 
+            <span className="text-gray-600 font-semibold"> Direct Link</span>, and paste it here.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
+
