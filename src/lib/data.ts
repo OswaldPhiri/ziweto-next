@@ -4,7 +4,6 @@
 // Using these avoids the anti-pattern of server components calling their own API routes.
 
 import { adminDb } from "@/lib/firebase-admin";
-import { DEMO_PRODUCTS } from "@/lib/demo-products";
 import { Product } from "@/types";
 
 function docToProduct(doc: FirebaseFirestore.DocumentSnapshot): Product {
@@ -32,20 +31,16 @@ export async function getAllProducts(): Promise<Product[]> {
       .orderBy("createdAt", "desc")
       .get();
 
-    if (snapshot.empty) return DEMO_PRODUCTS;
+    if (snapshot.empty) return [];
     return snapshot.docs.map(docToProduct);
   } catch (err) {
-    // Firebase not configured yet — return demo data so the UI always works
-    console.warn("Firestore unavailable, serving demo data:", (err as Error).message);
-    return DEMO_PRODUCTS;
+    console.error("getAllProducts error:", (err as Error).message);
+    return [];
   }
 }
 
 // Single product by ID
 export async function getProductById(id: string): Promise<Product | null> {
-  if (id.startsWith("demo-")) {
-    return DEMO_PRODUCTS.find((p) => p.id === id) ?? null;
-  }
   try {
     const doc = await adminDb.collection("products").doc(id).get();
     if (!doc.exists) return null;
@@ -65,13 +60,10 @@ export async function getProductsBySeller(sellerId: string): Promise<Product[]> 
       .orderBy("createdAt", "desc")
       .get();
 
-    if (snapshot.empty) {
-      // Check demo data
-      return DEMO_PRODUCTS.filter((p) => p.seller.id === sellerId);
-    }
+    if (snapshot.empty) return [];
     return snapshot.docs.map(docToProduct);
   } catch (err) {
     console.warn("getProductsBySeller error:", (err as Error).message);
-    return DEMO_PRODUCTS.filter((p) => p.seller.id === sellerId);
+    return [];
   }
 }
